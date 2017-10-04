@@ -19,7 +19,7 @@ this package requires rdkit
 [link](http://www.rdkit.org/docs/Install.html)
 after creating a conda environment:
 conda install postgresql
-conda install rdkit
+conda install rdkit rdkit
 
 # Windows install
 

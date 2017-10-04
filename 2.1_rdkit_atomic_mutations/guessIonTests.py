@@ -1,5 +1,7 @@
 #! /sur/bin/python
+import matplotlib.pylab as plt
 import rdkit
+from rdkit.Chem import Draw
 from rdkit import Chem
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem.Draw import ShowMol
@@ -40,7 +42,9 @@ def display(candidate, startTime):
     timeDiff = datetime.datetime.now() - startTime
     print("{}\t{}\t{}".format(
 	candidate.Genes, candidate.Fitness, timeDiff))
-    
+    ax = Draw.MolToMPL(candidate.Mol)
+    plt.show()
+
 def get_fitness(genes, target):
     return sum(1 for expected, actual in zip(target, genes)
               if expected == actual)
