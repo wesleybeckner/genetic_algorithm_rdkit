@@ -1,4 +1,4 @@
-### Genetic Algorithm Can Accurately Navigate Structure Space for Low Viscosity Ionic Liquids
+### Genetic Algorithm Can Accurately Navigate Structure Space for Ionic Liquids with Desirable Properties
 1. X versions - no RDKit integration
 2. X versions - RDKit integration
     1. atomic mutations, alpha-num fitness test, fixed bonds, non-random starting structure
