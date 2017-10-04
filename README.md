@@ -17,6 +17,9 @@ this package requires rdkit
 # MAC OS install
 
 [link](http://www.rdkit.org/docs/Install.html)
+after creating a conda environment:
+conda install postgresql
+conda install rdkit
 
 # Windows install
 
