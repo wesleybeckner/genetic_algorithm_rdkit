@@ -12,3 +12,12 @@ Genetic algorithms that use QSPR models in their fitness test can be used to nav
 4. X versions - performance upgrades using clustering/similarity maps
 5. X versions - different search structures
 
+this package requires rdkit
+
+# MAC OS install
+
+[link](http://www.rdkit.org/docs/Install.html)
+
+# Windows install
+
+conda install -c rdkit rdkit
