@@ -1,4 +1,7 @@
 ### Genetic Algorithm Can Accurately Navigate Structure Space for Ionic Liquids with Desirable Properties
+
+Genetic algorithms that use QSPR models in their fitness test can be used to navigate molecular structure space and design new materials.
+
 1. X versions - no RDKit integration
 2. X versions - RDKit integration
     1. atomic mutations, alpha-num fitness test, fixed bonds, non-random starting structure
