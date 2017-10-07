@@ -23,7 +23,7 @@ class GuessIonTests(unittest.TestCase):
     fcgen.AddFragsFromMol(m1,fcat)
     
     def test_1_butyl_2_3_dimethyl_1H_imidazolium(self):
-        target = "NCNC[NH+]1C=CN(C)C1C"
+        target = "CCCC[NH+]1C=CN(C)C1C"
         self.guess_password(target)
 
     def test_benchmark(self):
@@ -44,7 +44,7 @@ class GuessIonTests(unittest.TestCase):
         optimalFitness = get_fitness(target, target)
         best = genetic.get_best(fnGetFitness, len(target),\
 			optimalFitness, self.geneSet, fnDisplay,\
-                        fnShowIon, self.fcat)
+                        fnShowIon)
         self.assertEqual(best.Genes, target)
     
 def display(candidate, startTime):

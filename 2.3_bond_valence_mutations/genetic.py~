@@ -44,11 +44,12 @@ def _generate_parent(length, geneSet, get_fitness):
     fitness = get_fitness(genes)
     return Chromosome(genes, fitness)
 
-def _mutate(parent, geneSet, get_fitness, fcat):
+def _mutate(parent, geneSet, get_fitness):
     childGenes = parent
-    mutate_operations = ["add fragment", "remove atom"]#, "replace atom", "add atom", "remove atom"]
+    mutate_operations = ["add fragment"]#, "replace atom", "add atom", "remove atom"]
     mutation_type = random.sample(mutate_operations, 1)[0]
     if mutation_type == "replace atom":
+
         while True:
             oldGene, alternate = random.sample(range(0,childGenes.RWMol.GetNumAtoms()), 2)
             if childGenes.RWMol.GetAtomWithIdx(alternate).IsInRing() == False and\
@@ -104,14 +105,15 @@ def _mutate(parent, geneSet, get_fitness, fcat):
             pass
         
     elif mutation_type == "add fragment":
-        RDKitOrCustom = random.sample([0,1],1)[0]
-        if RDKitOrCustom == 2:
-            newGene = Chromosome(Chem.MolToSmiles(fparams.GetFuncGroup(\
-                random.sample(range(fparams.GetNumFuncGroups()), 1)[0])),0)
-        else:
-            newGene = Chromosome(fcat.GetEntryDescription(\
-                random.sample(range(fcat.GetNumEntries()), 1)[0]),0)
         try:
+            RDKitOrCustom = random.sample([0,1],1)[0]
+            if RDKitOrCustom == 2:
+                newGene = Chromosome(Chem.MolToSmiles(fparams.GetFuncGroup(\
+                    random.sample(range(fparams.GetNumFuncGroups()), 1)[0])),0)
+            else:
+                newGene = Chromosome(fcat.GetEntryDescription(\
+                    random.sample(range(fcat.GetNumEntries()), 1)[0]),0)
+            print("this worked")
             combined = Chem.EditableMol(Chem.CombineMols(newGene.Mol,childGenes.Mol))
             oldGene = random.sample(range(childGenes.RWMol.GetNumAtoms()), 1)[0]\
                 + newGene.Mol.GetNumAtoms()
@@ -123,22 +125,23 @@ def _mutate(parent, geneSet, get_fitness, fcat):
             Chem.SanitizeMol(childGenes)
             genes = Chem.MolToSmiles(childGenes)
             fitness = get_fitness(genes)
+            
             return Chromosome(genes, fitness)
         except:
+            print("haylp")
             genes = Chem.MolToSmiles(parent.Mol)
             return Chromosome(genes, 0)
             pass
-        
 
 def get_best(get_fitness, targetLen, optimalFitness, geneSet, display,\
-        show_ion, fcat):
+        show_ion):
     random.seed()
     bestParent = _generate_parent(targetLen, geneSet, get_fitness)
     display(bestParent)
     if bestParent.Fitness >= optimalFitness:
         return bestParent
     while True:
-        child = _mutate(bestParent, geneSet, get_fitness, fcat)
+        child = _mutate(bestParent, geneSet, get_fitness)
         if bestParent.Fitness >= child.Fitness:
             continue
         display(child)
