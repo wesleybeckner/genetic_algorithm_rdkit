@@ -12,8 +12,13 @@ Genetic algorithms that use QSPR models in their fitness test can be used to nav
     1. get other 20k density data online
     2. follow viscosity protocol for density property
 4. X versions - performance upgrades using clustering/similarity maps
-5. X versions - different search structures
-
+    1. compare RDKit similarity map types
+    2. cationic vs anionic biasing
+    3. search structures (children/parent pool, chromosome crossover)
+5. X versions - expanded to IL mixtures
+6. X versions - GROMACS integration
+    1. generate pdb systems
+    2. suggest GROMACS commands
 
 this package requires rdkit
 
