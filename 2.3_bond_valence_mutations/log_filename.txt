@@ -1,0 +1,2 @@
+2017-10-24 09:52:50,940 - DEBUG - This is a log message.
+2017-10-24 09:54:38,891 - DEBUG - This is a log message.

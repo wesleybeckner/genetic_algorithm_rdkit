@@ -8,9 +8,12 @@ Genetic algorithms that use QSPR models in their fitness test can be used to nav
     2. atomic mutations, similarity map fitness test, fixed bonds, non-random starting structure
     3. atomic mutations, similarity map fitness test, bond mutations, non-random starting structure
     4. atomic mutations, similarity map fitness test, bond mutations, random starting structure
-3. X versions - viscosity fitness tests
+3. X versions - density/viscosity fitness tests
+    1. get other 20k density data online
+    2. follow viscosity protocol for density property
 4. X versions - performance upgrades using clustering/similarity maps
 5. X versions - different search structures
+
 
 this package requires rdkit
 
@@ -24,3 +27,5 @@ conda install rdkit rdkit
 # Windows install
 
 conda install -c rdkit rdkit
+
+

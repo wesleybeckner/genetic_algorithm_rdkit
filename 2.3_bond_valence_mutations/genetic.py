@@ -1,19 +1,34 @@
 import rdkit
+from rdkit import RDConfig
+from rdkit.Chem import FragmentCatalog
 from rdkit import DataStructs
 from rdkit.Chem.Fingerprints import FingerprintMols
 from rdkit import Chem
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem.Draw import ShowMol
+import os
 import statistics
 import time
 import random
 import sys
+from contextlib import contextmanager
 """
 This GA uses RDKit to make atomic mutations to a starting imidazole.
 The starting structure is not random.
 Fitness test uses RDKit FingerprintSimilarity.
 Number of atoms in parent/children are fixed.
 """
+
+@contextmanager
+def suppress_stdout():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:  
+            yield
+        finally:
+            sys.stdout = old_stdout
+
 class Benchmark:
     @staticmethod
     def run(function):
@@ -30,6 +45,13 @@ class Benchmark:
             print("{} {:3.2f} {:3.2f}".format(
                 1 + i, mean,
                 statistics.stdev(timings, mean) if i > 1 else 0))
+
+class GeneSet():
+    def __init__(self, atoms, rdkitFrags, customFrags):
+        self.Atoms = atoms
+        self.RdkitFrags = rdkitFrags
+        self.CustomFrags = customFrags
+
 class Chromosome(Chem.rdchem.Mol):
     def __init__(self, genes, fitness):
         Chem.rdchem.Mol.__init__(self)
@@ -39,35 +61,49 @@ class Chromosome(Chem.rdchem.Mol):
         self.RWMol = Chem.MolFromSmiles(genes)
         self.RWMol = Chem.RWMol(Chem.MolFromSmiles(genes))
 
-def _generate_parent(length, geneSet, get_fitness):
-    genes = "[NH+]1C=CN(C1C)C"
+def generate_geneset():
+    atoms = [6,7]
+    fName = os.path.join(RDConfig.RDDataDir,'FunctionalGroups.txt')
+    rdkitFrags = FragmentCatalog.FragCatParams(1,5,fName)
+    customFrags = FragmentCatalog.FragCatalog(rdkitFrags)
+    fcgen = FragmentCatalog.FragCatGenerator()
+    m = Chem.MolFromSmiles('CCCC')
+    fcgen.AddFragsFromMol(m,customFrags)
+    return GeneSet(atoms, customFrags, rdkitFrags)
+
+def _generate_parent(geneSet, get_fitness):
+    genes = "CC1N(C)C=C[NH+]1C"
     fitness = get_fitness(genes)
+    print(fitness)
     return Chromosome(genes, fitness)
 
-def _mutate(parent, geneSet, get_fitness, fcat):
-    def replace_atom(childGenes, geneSet, oldGene):
+def _mutate(parent, geneSet, get_fitness, target):
+    def replace_atom(childGenes, GeneSet, oldGene):
+        geneSet = GeneSet.Atoms
         if childGenes.RWMol.GetAtomWithIdx(oldGene).IsInRing() == True:
             genes = Chem.MolToSmiles(parent.Mol)
             return Chromosome(genes, 0)
         newGene = random.sample(geneSet, 1)[0]
         childGenes.RWMol.GetAtomWithIdx(oldGene).SetAtomicNum(newGene) 
         return childGenes  
-    def add_atom(childGenes, geneSet, oldGene):
+    def add_atom(childGenes, GeneSet, oldGene):
+        geneSet = GeneSet.Atoms
         newGeneNumber = childGenes.RWMol.GetNumAtoms()  
         newGene = random.sample(geneSet, 1)[0]
         childGenes.RWMol.AddAtom(Chem.Atom(newGene))
         childGenes.RWMol.AddBond(newGeneNumber,oldGene,Chem.BondType.SINGLE) 
         return childGenes
-    def remove_atom(childGenes, geneSet, oldGene):
+    def remove_atom(childGenes, GeneSet, oldGene):
         if childGenes.RWMol.GetAtomWithIdx(oldGene).GetExplicitValence() != 1:
             genes = Chem.MolToSmiles(parent.Mol)
             return Chromosome(genes, 0)
         childGenes.RWMol.RemoveAtom(oldGene)
         return childGenes
-    def add_rdkit_fragment(childGenes, geneSet, oldGene):
+    def add_custom_fragment(childGenes, GeneSet, oldGene):
+        geneSet = GeneSet.CustomFrags
         try:
-            newGene = Chromosome(Chem.MolToSmiles(fparams.GetFuncGroup(\
-            random.sample(range(fparams.GetNumFuncGroups()), 1)[0])),0)
+            newGene = Chromosome(Chem.MolToSmiles(geneSet.GetFuncGroup(\
+            random.sample(range(geneSet.GetNumFuncGroups()), 1)[0])),0)
         except:
             return 0
         oldGene = oldGene + newGene.Mol.GetNumAtoms()
@@ -79,9 +115,10 @@ def _mutate(parent, geneSet, get_fitness, fcat):
             return childGenes
         except:
             return 0
-    def add_custom_fragment(childGenes, geneSet, oldGene):
-        newGene = Chromosome(fcat.GetEntryDescription(\
-        random.sample(range(fcat.GetNumEntries()), 1)[0]),0)
+    def add_rdkit_fragment(childGenes, GeneSet, oldGene):
+        geneSet = GeneSet.RdkitFrags
+        newGene = Chromosome(geneSet.GetEntryDescription(\
+        random.sample(range(geneSet.GetNumEntries()), 1)[0]),0)
         oldGene = oldGene + newGene.Mol.GetNumAtoms()
         combined = Chem.EditableMol(Chem.CombineMols(newGene.Mol,childGenes.Mol))
         combined.AddBond(0,oldGene,order=Chem.rdchem.BondType.SINGLE)
@@ -93,29 +130,31 @@ def _mutate(parent, geneSet, get_fitness, fcat):
             return 0
     childGenes = Chromosome(parent.Genes,0)
     oldGene = random.sample(range(childGenes.RWMol.GetNumAtoms()), 1)[0]
-    mutate_operations = [add_rdkit_fragment, add_custom_fragment, remove_atom, \
-            replace_atom, add_atom]
+    mutate_operations = [add_atom, remove_atom,\
+	replace_atom, add_custom_fragment, add_rdkit_fragment]
     i = random.choice(range(len(mutate_operations)))
     childGenes = mutate_operations[i](childGenes, geneSet, oldGene)
     try:
         childGenes.RWMol.UpdatePropertyCache(strict=True)
-        Chem.SanitizeMol(childGenes.RWMol)
+        with suppress_stdout():
+            Chem.SanitizeMol(childGenes.RWMol)
+            print("is working?")
         genes = Chem.MolToSmiles(childGenes.RWMol)
-        fitness = get_fitness(genes, target)
+        fitness = get_fitness(genes)
         return Chromosome(genes, fitness)
     except:
         return Chromosome(parent.Genes, 0)
         
 
-def get_best(get_fitness, targetLen, optimalFitness, geneSet, display,\
-        show_ion, fcat):
+def get_best(get_fitness, optimalFitness, geneSet, display,\
+        show_ion, target):
     random.seed()
-    bestParent = _generate_parent(targetLen, geneSet, get_fitness)
+    bestParent = _generate_parent(geneSet, get_fitness)
     display(bestParent)
     if bestParent.Fitness >= optimalFitness:
         return bestParent
     while True:
-        child = _mutate(bestParent, geneSet, get_fitness, fcat)
+        child = _mutate(bestParent, geneSet, get_fitness, target)
         if bestParent.Fitness >= child.Fitness:
             continue
         display(child)

@@ -1,6 +1,7 @@
 #! /sur/bin/python
 import rdkit
 import os
+from rdkit import RDConfig
 from rdkit.Chem import FragmentCatalog
 from rdkit import RDConfig
 from rdkit import DataStructs
@@ -14,13 +15,7 @@ import datetime
 import genetic #our genetic engine code
 
 class GuessIonTests(unittest.TestCase):
-    geneSet= [5,6,7,8,15,16]#B,C,N,O,F,P,S
-    fName=os.path.join(RDConfig.RDDataDir,'FunctionalGroups.txt')
-    fparams = FragmentCatalog.FragCatParams(1,5,fName)
-    fcat=FragmentCatalog.FragCatalog(fparams)
-    fcgen=FragmentCatalog.FragCatGenerator()
-    m1 = Chem.MolFromSmiles('CCCC')
-    fcgen.AddFragsFromMol(m1,fcat)
+    geneSet = genetic.generate_geneset()
     
     def test_1_butyl_2_3_dimethyl_1H_imidazolium(self):
         target = "NCNC[NH+]1C=CN(C)C1C"
@@ -42,10 +37,9 @@ class GuessIonTests(unittest.TestCase):
             show_ion(target)
 
         optimalFitness = get_fitness(target, target)
-        best = genetic.get_best(fnGetFitness, len(target),\
+        best = genetic.get_best(fnGetFitness,\
 			optimalFitness, self.geneSet, fnDisplay,\
-                        fnShowIon, self.fcat)
-        self.assertEqual(best.Genes, target)
+                        fnShowIon, target)
     
 def display(candidate, startTime):
     timeDiff = datetime.datetime.now() - startTime
