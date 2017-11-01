@@ -102,19 +102,23 @@ def _mutate(parent, geneSet, get_fitness, target):
     def add_custom_fragment(childGenes, GeneSet, oldGene):
         geneSet = GeneSet.CustomFrags
         try:
-            newGene = Chromosome(Chem.MolToSmiles(geneSet.GetFuncGroup(\
-            random.sample(range(geneSet.GetNumFuncGroups()), 1)[0])),0)
+            with suppress_stdout():
+                newGene = Chromosome(Chem.MolToSmiles(geneSet.GetFuncGroup(\
+                random.sample(range(geneSet.GetNumFuncGroups()), 1)[0])),0)
         except:
-            return 0
+            with suppress_stdout():
+                return 0
         oldGene = oldGene + newGene.Mol.GetNumAtoms()
         combined = Chem.EditableMol(Chem.CombineMols(newGene.Mol,childGenes.Mol))
         combined.AddBond(1,oldGene,order=Chem.rdchem.BondType.SINGLE)
         combined.RemoveAtom(0)
         try:
-            childGenes = Chromosome(Chem.MolToSmiles(childGenes),0)  
-            return childGenes
+            with suppress_stdout():
+                childGenes = Chromosome(Chem.MolToSmiles(childGenes),0)  
+                return childGenes
         except:
-            return 0
+            with suppress_stdout():
+                return 0
     def add_rdkit_fragment(childGenes, GeneSet, oldGene):
         geneSet = GeneSet.RdkitFrags
         newGene = Chromosome(geneSet.GetEntryDescription(\
@@ -124,26 +128,28 @@ def _mutate(parent, geneSet, get_fitness, target):
         combined.AddBond(0,oldGene,order=Chem.rdchem.BondType.SINGLE)
         childGenes = combined.GetMol()   
         try:
-            childGenes = Chromosome(Chem.MolToSmiles(childGenes),0)  
-            return childGenes
+            with suppress_stdout():
+                childGenes = Chromosome(Chem.MolToSmiles(childGenes),0)  
+                return childGenes
         except:
-            return 0
+            with suppress_stdout():
+                return 0
     childGenes = Chromosome(parent.Genes,0)
     oldGene = random.sample(range(childGenes.RWMol.GetNumAtoms()), 1)[0]
     mutate_operations = [add_atom, remove_atom,\
-	replace_atom, add_custom_fragment, add_rdkit_fragment]
+	replace_atom]
     i = random.choice(range(len(mutate_operations)))
     childGenes = mutate_operations[i](childGenes, geneSet, oldGene)
     try:
-        childGenes.RWMol.UpdatePropertyCache(strict=True)
         with suppress_stdout():
+            childGenes.RWMol.UpdatePropertyCache(strict=True)
             Chem.SanitizeMol(childGenes.RWMol)
-            print("is working?")
-        genes = Chem.MolToSmiles(childGenes.RWMol)
-        fitness = get_fitness(genes)
-        return Chromosome(genes, fitness)
+            genes = Chem.MolToSmiles(childGenes.RWMol)
+            fitness = get_fitness(genes)
+            return Chromosome(genes, fitness)
     except:
-        return Chromosome(parent.Genes, 0)
+        with suppress_stdout():
+            return Chromosome(parent.Genes, 0)
         
 
 def get_best(get_fitness, optimalFitness, geneSet, display,\
@@ -154,7 +160,8 @@ def get_best(get_fitness, optimalFitness, geneSet, display,\
     if bestParent.Fitness >= optimalFitness:
         return bestParent
     while True:
-        child = _mutate(bestParent, geneSet, get_fitness, target)
+        with suppress_stdout():
+            child = _mutate(bestParent, geneSet, get_fitness, target)
         if bestParent.Fitness >= child.Fitness:
             continue
         display(child)
