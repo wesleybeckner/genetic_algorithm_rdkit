@@ -1,4 +1,5 @@
-#! /sur/bin/python
+#! /usr/bin/python
+import genetic #our genetic engine code
 import rdkit
 import os
 from rdkit import RDConfig
@@ -12,13 +13,12 @@ from rdkit.Chem.Draw import ShowMol
 import random
 import unittest
 import datetime
-import genetic #our genetic engine code
 
 class GuessIonTests(unittest.TestCase):
     geneSet = genetic.generate_geneset()
     
     def test_1_butyl_2_3_dimethyl_1H_imidazolium(self):
-        target = "NCNC[NH+]1C=CN(C)C1C"
+        target = "CN1C=C[N+](=C1)C"
         self.guess_password(target)
 
     def test_benchmark(self):
@@ -30,31 +30,30 @@ class GuessIonTests(unittest.TestCase):
         def fnGetFitness(genes):
             return get_fitness(genes, target)
 
-        def fnDisplay(candidate, mutation):
-            display(candidate, mutation, startTime)
+        def fnDisplay(candidate):
+            display(candidate, startTime)
 
-        def fnShowIon(mutation_attempts):
-            show_ion(target, mutation_attempts)
+        def fnShowIon():
+            show_ion(target)
 
         optimalFitness = get_fitness(target, target)
         best = genetic.get_best(fnGetFitness,\
 			optimalFitness, self.geneSet, fnDisplay,\
                         fnShowIon, target)
     
-def display(candidate, mutation, startTime):
+def display(candidate, startTime):
     timeDiff = datetime.datetime.now() - startTime
-    print("{}\t{}\t{}\t{}".format(
-	candidate.Genes, candidate.Fitness, mutation, timeDiff))
+    print("{}\t{}\t{}".format(
+	candidate.Genes, candidate.Fitness, timeDiff))
     
 def get_fitness(genes, target):
     ms = [Chem.MolFromSmiles(target), Chem.MolFromSmiles(genes)]
     fps = [FingerprintMols.FingerprintMol(x) for x in ms]
     return DataStructs.FingerprintSimilarity(fps[0],fps[1])
 
-def show_ion(target, mutation_attempts):
+def show_ion(target):
     mol = Chem.MolFromSmiles(target)
     print("{}\t{}".format("number of atoms: ", mol.GetNumAtoms()))
-    print("{}\t{}".format("mutation attempts: ", mutation_attempts))
     for atom in mol.GetAtoms():
         print("{}\t{}\t{}".format("atom %s ring status and valence:"\
                 %atom.GetSymbol(), atom.IsInRing(), atom.GetExplicitValence()))

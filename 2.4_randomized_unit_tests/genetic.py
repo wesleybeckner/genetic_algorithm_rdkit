@@ -1,4 +1,3 @@
-import subprocess
 import rdkit
 from rdkit import RDConfig
 from rdkit.Chem import FragmentCatalog
@@ -19,36 +18,6 @@ The starting structure is not random.
 Fitness test uses RDKit FingerprintSimilarity.
 Number of atoms in parent/children are fixed.
 """
-
-# Define a context manager to suppress stdout and stderr.
-class suppress_stdout_stderr(object):
-    '''
-    A context manager for doing a "deep suppression" of stdout and stderr in 
-    Python, i.e. will suppress all print, even if the print originates in a 
-    compiled C/Fortran sub-function.
-       This will not suppress raised exceptions, since exceptions are printed
-    to stderr just before a script exits, and after the context manager has
-    exited (at least, I think that is why it lets exceptions through).      
-
-    '''
-    def __init__(self):
-        # Open a pair of null files
-        self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
-        # Save the actual stdout (1) and stderr (2) file descriptors.
-        self.save_fds = [os.dup(1), os.dup(2)]
-
-    def __enter__(self):
-        # Assign the null pointers to stdout and stderr.
-        os.dup2(self.null_fds[0],1)
-        os.dup2(self.null_fds[1],2)
-
-    def __exit__(self, *_):
-        # Re-assign the real stdout/stderr back to (1) and (2)
-        os.dup2(self.save_fds[0],1)
-        os.dup2(self.save_fds[1],2)
-        # Close all file descriptors
-        for fd in self.null_fds + self.save_fds:
-            os.close(fd)
 
 class Benchmark:
     @staticmethod
@@ -93,7 +62,7 @@ def generate_geneset():
     return GeneSet(atoms, rdkitFrags, customFrags)
 
 def _generate_parent(geneSet, get_fitness):
-    genes = "CC1N(C)C=C[NH+]1C"
+    genes = "CCN1C=C[N+](=C1)C"
     fitness = get_fitness(genes)
     print(fitness)
     return Chromosome(genes, fitness)
@@ -144,11 +113,7 @@ def _mutate(parent, geneSet, get_fitness, target):
         combined = Chem.EditableMol(Chem.CombineMols(newGene.Mol,childGenes.Mol))
         combined.AddBond(1,oldGene,order=Chem.rdchem.BondType.SINGLE)
         combined.RemoveAtom(0)
-        try:
-            childGenes = Chromosome(Chem.MolToSmiles(combined.GetMol()),0)
-            return childGenes
-        except:
-            return 0
+        childGenes = combined.GetMol()   
     def remove_custom_fragment(childGenes, GeneSet, oldGene):
         geneSet = GeneSet.CustomFrags
         newGene = Chromosome(geneSet.GetEntryDescription(\
@@ -174,10 +139,24 @@ def _mutate(parent, geneSet, get_fitness, target):
             return childGenes
         except:
             return 0
+    def break_ring(childGenes, GeneSet, oldGene):
+        n = -1
+        if oldGene == childGenes.RWMol.GetNumAtoms():
+            n = -1
+        if childGenes.RWMol.GetAtomWithIdx(oldGene).IsInRing() == False or\
+        childGenes.RWMol.GetAtomWithIdx(oldGene+n).IsInRing() == False:
+            genes = Chem.MolToSmiles(parent.Mol)
+            return Chromosome(genes, 0)
+        else:
+            combined = Chem.EditableMol(childGenes.Mol)
+            combined.RemoveBond(oldGene,oldGene+n)
+            childGenes = Chromosome(Chem.MolToSmiles(combined.GetMol()).upper(),0)  
+            return childGenes
     childGenes = Chromosome(parent.Genes,0)
     oldGene = random.sample(range(childGenes.RWMol.GetNumAtoms()), 1)[0]
-    mutate_operations = [add_atom, remove_atom, remove_custom_fragment,\
-	replace_atom, add_rdkit_fragment, add_custom_fragment, remove_rdkit_fragment]
+    mutate_operations = [remove_atom,\
+        replace_atom, add_atom, remove_custom_fragment, remove_rdkit_fragment,\
+        add_rdkit_fragment]
     i = random.choice(range(len(mutate_operations)))
     mutation = mutate_operations[i].__name__
     childGenes = mutate_operations[i](childGenes, geneSet, oldGene)
@@ -185,7 +164,7 @@ def _mutate(parent, geneSet, get_fitness, target):
         childGenes.RWMol.UpdatePropertyCache(strict=True)
         Chem.SanitizeMol(childGenes.RWMol)
         genes = Chem.MolToSmiles(childGenes.RWMol)
-        fitness = get_fitness(genes)
+        fitness = get_fitness(genes, target)
         return Chromosome(genes, fitness), mutation
     except:
         return Chromosome(parent.Genes, 0), mutation
@@ -193,27 +172,17 @@ def _mutate(parent, geneSet, get_fitness, target):
 
 def get_best(get_fitness, optimalFitness, geneSet, display,\
         show_ion, target):
-    mutation_attempts = 0
-    attempts_since_last_adoption = 0
     random.seed()
     bestParent = _generate_parent(geneSet, get_fitness)
-    display(bestParent, "starting structure")
+    display(bestParent)
     if bestParent.Fitness >= optimalFitness:
         return bestParent
     while True:
-        with suppress_stdout_stderr():
-            child, mutation = _mutate(bestParent, geneSet, get_fitness, target)
-        mutation_attempts += 1
-        attempts_since_last_adoption += 1
-        if attempts_since_last_adoption > 500:
-            bestParent = _generate_parent(geneSet, get_fitness)
-            attempts_since_last_adoption = 0
-            print("starting from original parent")
-        if bestParent.Fitness >= child.Fitness:
+        child, mutation = _mutate(bestParent, geneSet, get_fitness, target)
+        if bestParent.Fitness > child.Fitness:
             continue
-        display(child, mutation)
-        attempts_since_last_adoption = 0
+        display(child)
         if child.Fitness >= optimalFitness:
-            show_ion(mutation_attempts)
+            show_ion()
             return child
         bestParent = child

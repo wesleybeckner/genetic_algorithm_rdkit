@@ -22,6 +22,11 @@ Genetic algorithms that use QSPR models in their fitness test can be used to nav
 
 this package requires rdkit
 
+# Linux OS install
+
+conda create -n py36 python=3.6 anaconda
+conda install -c rdkit rdkit
+
 # MAC OS install
 
 [link](http://www.rdkit.org/docs/Install.html)
